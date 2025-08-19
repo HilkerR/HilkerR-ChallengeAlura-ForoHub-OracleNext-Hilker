@@ -1,0 +1,42 @@
+package com.challenge_foro_hub.controllers;
+
+import com.challenge_foro_hub.dtos.user.UserRequestDto;
+import com.challenge_foro_hub.dtos.auth.JWTTokenDto;
+import com.challenge_foro_hub.exceptions.IncorrectLoginException;
+import com.challenge_foro_hub.models.entitites.User;
+import com.challenge_foro_hub.security.TokenService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+public class AuthenticationController {
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private TokenService tokenService;
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody UserRequestDto userRequestDto) {
+        SecurityContextHolder.clearContext();
+        SecurityContextHolder.setContext(SecurityContextHolder.createEmptyContext());
+        Authentication token = new UsernamePasswordAuthenticationToken(userRequestDto.userName(), userRequestDto.password());
+        try {
+            authenticationManager.authenticate(token);
+        } catch (Exception e) {
+           throw new IncorrectLoginException("Credenciales incorrectas");
+        }
+        Authentication authUser = authenticationManager.authenticate(token);
+        User user = (User) authUser.getPrincipal();
+        System.out.println(user.getUserName());
+        String tokenJWT = tokenService.generateToken(user);
+        return ResponseEntity.ok(new JWTTokenDto(tokenJWT));
+    }
+
+}
